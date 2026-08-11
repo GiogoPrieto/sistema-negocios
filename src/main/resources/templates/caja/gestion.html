@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestión de Caja - Arqueo</title>
+    <link rel="stylesheet" th:href="@{/estilos.css}">
+    <style>
+        .grid-caja { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 25px; }
+        .card-caja { background: white; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .monto-box { font-size: 24px; font-weight: bold; margin: 10px 0; color: #0f172a; }
+        .dif-positiva { color: #16a34a; font-weight: bold; }
+        .dif-negativa { color: #dc2626; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-content">
+        <h1>Sistema de Negocios</h1>
+        <p>Apertura, Cierre y Arqueo de Caja</p>
+    </div>
+</header>
+
+<main>
+    <div th:if="${exito}" style="background-color: #d1fae5; color: #065f46; padding: 12px; border-radius: 6px; margin-bottom: 20px;">
+        ✅ <span th:text="${exito}"></span>
+    </div>
+    <div th:if="${error}" style="background-color: #fee2e2; color: #991b1b; padding: 12px; border-radius: 6px; margin-bottom: 20px;">
+        ❌ <span th:text="${error}"></span>
+    </div>
+
+    <!-- BOTONERA DE NAVEGACIÓN -->
+    <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 class="page-title" style="margin: 0;">Panel de Caja</h2>
+        <div style="display: flex; gap: 10px;">
+            <a th:href="@{/productos}" class="btn" style="background-color: #475569; color: white; text-decoration: none;">📦 Volver a Productos</a>
+            <a th:href="@{/ventas}" class="btn" style="background-color: #059669; color: white; text-decoration: none;">🛒 Ir a Ventas</a>
+        </div>
+    </div>
+
+    <!-- SECCIÓN DE CAJA ACTUAL -->
+    <div class="grid-caja">
+
+        <!-- FORMULARIO DE APERTURA (Si no hay caja abierta) -->
+        <div class="card-caja" th:if="${cajaAbierta == null}">
+            <h3>🟢 Apertura de Caja</h3>
+            <p style="color: #64748b; font-size: 14px;">Ingrese el monto inicial en efectivo para iniciar la jornada.</p>
+            <form th:action="@{/caja/abrir}" method="post" style="margin-top: 15px;">
+                <div style="margin-bottom: 15px;">
+                    <label style="display:block; margin-bottom: 5px;">Dinero Inicial en Caja ($):</label>
+                    <input type="number" step="0.01" name="montoInicial" placeholder="0.00" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Abrir Caja del Día</button>
+            </form>
+        </div>
+
+        <!-- FORMULARIO DE CIERRE / ARQUEO (Si la caja está abierta) -->
+        <div class="card-caja" th:if="${cajaAbierta != null}">
+            <h3>🔴 Cierre y Arqueo de Caja</h3>
+            <p style="color: #64748b; font-size: 13px; margin-bottom: 15px;">
+                Abierta el: <strong th:text="${#temporals.format(cajaAbierta.fechaApertura, 'dd/MM/yyyy HH:mm')}">--/--/----</strong>
+            </p>
+
+            <!-- DESGLOSE DE VENTAS POR MÉTODO DE PAGO Y SUMA TOTAL -->
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px;">
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
+                    <span style="font-size: 12px; color: #64748b; font-weight: bold;">💵 VENTAS EN EFECTIVO</span>
+                    <h4 style="margin: 5px 0 0 0; font-size: 20px;" th:text="${'$ ' + #numbers.formatDecimal(cajaAbierta.ventasEfectivo, 1, 'POINT', 0, 'POINT')}">$ 0</h4>
+                </div>
+
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
+                    <span style="font-size: 12px; color: #64748b; font-weight: bold;">💳 TARJETAS (DÉBITO / CRÉDITO)</span>
+                    <h4 style="margin: 5px 0 0 0; font-size: 20px;" th:text="${'$ ' + #numbers.formatDecimal((cajaAbierta.ventasDebito + cajaAbierta.ventasCredito), 1, 'POINT', 0, 'POINT')}">$ 0</h4>
+                </div>
+
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
+                    <span style="font-size: 12px; color: #64748b; font-weight: bold;">🏦 TRANSFERENCIA / QR</span>
+                    <h4 style="margin: 5px 0 0 0; font-size: 20px;" th:text="${'$ ' + #numbers.formatDecimal((cajaAbierta.ventasTransferencia + cajaAbierta.ventasQr), 1, 'POINT', 0, 'POINT')}">$ 0</h4>
+                </div>
+            </div>
+
+            <!-- TARJETA DESTACADA SUMA TOTAL GENERAL DE VENTAS -->
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h3 style="margin: 0; color: #1e40af; font-size: 16px;">📊 TOTAL GENERAL DE VENTAS REGISTRADAS</h3>
+                    <small style="color: #3b82f6;">Suma de todos los medios de pago durante el turno actual</small>
+                </div>
+                <div style="font-size: 26px; font-weight: bold; color: #1d4ed8;" th:text="${'$ ' + #numbers.formatDecimal(cajaAbierta.totalVentasGeneral, 1, 'POINT', 0, 'POINT')}">
+                    $ 0
+                </div>
+            </div>
+
+            <!-- RESUMEN ESPERADO FÍSICO Y FORMULARIO -->
+            <div style="background: #f8fafc; padding: 15px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #e2e8f0;">
+                <div>Monto Inicial: <strong>$ <span th:text="${#numbers.formatDecimal(cajaAbierta.montoInicial, 1, 'POINT', 0, 'POINT')}">0</span></strong></div>
+                <div>Ventas en Efectivo: <strong>$ <span th:text="${#numbers.formatDecimal(cajaAbierta.ventasEfectivo, 1, 'POINT', 0, 'POINT')}">0</span></strong></div>
+                <hr style="border: 0; border-top: 1px solid #cbd5e1; margin: 8px 0;">
+                <div>Total Esperado en Caja (Efectivo):
+                    <strong class="monto-box" style="font-size:18px;">$
+                        <span id="montoEsperadoVal"
+                              th:data-monto="${cajaAbierta.montoEsperado}"
+                              th:text="${#numbers.formatDecimal(cajaAbierta.montoEsperado, 1, 'POINT', 0, 'POINT')}">0</span>
+                    </strong>
+                </div>
+            </div>
+
+            <form th:action="@{/caja/cerrar}" method="post">
+                <input type="hidden" name="idCaja" th:value="${cajaAbierta.id}">
+
+                <div style="margin-bottom: 10px;">
+                    <label style="display:block; margin-bottom: 5px; font-weight: bold;">Monto Real en Físico (Arqueo):</label>
+                    <input type="number" step="0.01" id="montoReal" name="montoReal" oninput="calcularDiferencia()" required placeholder="0.00" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                </div>
+
+                <div style="margin-bottom: 10px;">
+                    <label style="font-weight: bold;">Diferencia:</label>
+                    <div id="montoDiferencia" style="font-size: 16px; font-weight: bold; color: #64748b;">$ 0</div>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <input type="text" name="observaciones" placeholder="Observaciones (opcional)..." style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                </div>
+
+                <button type="submit" class="btn" style="background-color: #dc2626; color: white; width: 100%;">Finalizar Arqueo y Cerrar Caja</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- HISTORIAL DE ARQUEOS -->
+    <h3>Historial de Cierres de Caja</h3>
+    <div class="table-card">
+        <table>
+            <thead>
+            <tr>
+                <th>#</th>
+                <th>Apertura</th>
+                <th>Cierre</th>
+                <th>Inicial</th>
+                <th>Ventas Efectivo</th>
+                <th>Total Ventas</th>
+                <th>Esperado</th>
+                <th>Real</th>
+                <th>Diferencia</th>
+                <th>Notas</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="c : ${historial}">
+                <td th:text="${'#' + c.id}">#1</td>
+                <td th:text="${#temporals.format(c.fechaApertura, 'dd/MM/yyyy HH:mm')}">--</td>
+                <td th:text="${#temporals.format(c.fechaCierre, 'dd/MM/yyyy HH:mm')}">--</td>
+                <td th:text="${'$ ' + #numbers.formatDecimal(c.montoInicial, 1, 'POINT', 0, 'POINT')}">$0</td>
+                <td th:text="${'$ ' + #numbers.formatDecimal(c.ventasEfectivo, 1, 'POINT', 0, 'POINT')}">$0</td>
+                <td th:text="${'$ ' + #numbers.formatDecimal(c.totalVentasGeneral, 1, 'POINT', 0, 'POINT')}">$0</td>
+                <td th:text="${'$ ' + #numbers.formatDecimal(c.montoEsperado, 1, 'POINT', 0, 'POINT')}">$0</td>
+                <td th:text="${'$ ' + #numbers.formatDecimal(c.montoReal, 1, 'POINT', 0, 'POINT')}">$0</td>
+                <td th:class="${c.diferencia < 0 ? 'dif-negativa' : (c.diferencia > 0 ? 'dif-positiva' : '')}"
+                    th:text="${(c.diferencia > 0 ? '+$ ' : '$ ') + #numbers.formatDecimal(c.diferencia, 1, 'POINT', 0, 'POINT')}">$0</td>
+                <td th:text="${c.observaciones}">-</td>
+            </tr>
+            <tr th:if="${historial == null || #lists.isEmpty(historial)}">
+                <td colspan="10" style="text-align: center; color: #64748b; padding: 15px;">No hay cierres registrados.</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+
+<script>
+    function calcularDiferencia() {
+        const elEsperado = document.getElementById("montoEsperadoVal");
+        const esperado = parseFloat(elEsperado.getAttribute("data-monto")) || 0;
+        const real = parseFloat(document.getElementById("montoReal").value) || 0;
+        const diff = real - esperado;
+
+        const contenedor = document.getElementById("montoDiferencia");
+
+        if (isNaN(real)) {
+            contenedor.innerText = "$ 0";
+            contenedor.className = "";
+            return;
+        }
+
+        const fmt = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 });
+
+        if (diff < 0) {
+            contenedor.innerText = "- $ " + fmt.format(Math.abs(diff)) + " (Faltante)";
+            contenedor.className = "dif-negativa";
+        } else if (diff > 0) {
+            contenedor.innerText = "+ $ " + fmt.format(diff) + " (Sobrante)";
+            contenedor.className = "dif-positiva";
+        } else {
+            contenedor.innerText = "$ 0 (Cuadrado)";
+            contenedor.className = "";
+        }
+    }
+</script>
+
+</body>
+</html>

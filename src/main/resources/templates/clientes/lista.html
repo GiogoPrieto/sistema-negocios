@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestión de Clientes</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: 20px auto; background: white; padding: 30px; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        h2 { margin: 0; color: #0f172a; font-size: 22px; }
+
+        /* PANEL DE BÚSQUEDA */
+        .search-panel { background: #f1f5f9; padding: 12px 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #cbd5e1; display: flex; gap: 10px; align-items: center; }
+        .search-panel input[type="text"] { width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 14px; background: white; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { background-color: #f8fafc; text-align: left; padding: 12px 10px; font-size: 13px; color: #64748b; border-bottom: 2px solid #e2e8f0; }
+        td { padding: 12px 10px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+
+        .btn { padding: 8px 14px; border-radius: 6px; border: none; font-weight: 600; text-decoration: none; cursor: pointer; font-size: 13px; display: inline-block; }
+        .btn-blue { background-color: #2563eb; color: white; }
+        .btn-gray { background-color: #e2e8f0; color: #334155; }
+        .btn-amber { background-color: #d97706; color: white; }
+        .btn-green { background-color: #059669; color: white; }
+
+        /* MODAL */
+        .modal-backdrop { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.5); z-index: 2000; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 25px; border-radius: 10px; max-width: 450px; width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .modal-header h3 { margin: 0; font-size: 18px; }
+        .close-btn { cursor: pointer; font-size: 20px; font-weight: bold; color: #64748b; border: none; background: none; }
+        label { display: block; font-weight: 600; margin-bottom: 4px; font-size: 12px; color: #475569; }
+        .modal-content input[type="text"] { width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 14px; margin-bottom: 12px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h2>Gestión de Clientes</h2>
+        <div>
+            <a th:href="@{/ventas}" class="btn btn-gray">Volver a Ventas</a>
+            <button class="btn btn-blue" onclick="abrirModalNuevo()">+ Nuevo Cliente</button>
+        </div>
+    </div>
+
+    <!-- BUSCADOR DE CLIENTES -->
+    <div class="search-panel">
+        <input type="text" id="inputBuscador" placeholder="🔍 Buscar por RUC/CI o Nombre del cliente..." oninput="filtrarTablaClientes()">
+        <button class="btn btn-gray" onclick="limpiarBuscador()">Limpiar</button>
+    </div>
+
+    <table>
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>RUC / CI</th>
+            <th>Nombre / Razón Social</th>
+            <th>Teléfono</th>
+            <th>Dirección</th>
+            <th>Acciones</th>
+        </tr>
+        </thead>
+        <tbody id="tablaClientesBody">
+        <tr th:each="c : ${clientes}" class="fila-cliente">
+            <td th:text="${c.id}">1</td>
+            <td class="col-ruc" th:text="${c.ruc != null && c.ruc != '' ? c.ruc : '---'}">123456</td>
+            <td class="col-nombre" th:text="${c.nombre}">Juan Pérez</td>
+            <td th:text="${c.telefono != null && c.telefono != '' ? c.telefono : '---'}">0981123456</td>
+            <td th:text="${c.direccion != null && c.direccion != '' ? c.direccion : '---'}">Calle 123</td>
+            <td>
+                <button class="btn btn-amber"
+                        th:data-id="${c.id}"
+                        th:data-ruc="${c.ruc}"
+                        th:data-nombre="${c.nombre}"
+                        th:data-telefono="${c.telefono}"
+                        th:data-direccion="${c.direccion}"
+                        onclick="editarCliente(this)">Editar</button>
+
+                <a th:href="@{/clientes/historial/{id}(id=${c.id})}" class="btn btn-green">Ver Historial</a>
+            </td>
+        </tr>
+        <tr id="rowSinResultados" style="display: none;">
+            <td colspan="6" style="text-align: center; color: #94a3b8; font-style: italic;">No se encontraron clientes que coincidan con la búsqueda.</td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(clientes)}">
+            <td colspan="6" style="text-align: center; color: #94a3b8; font-style: italic;">No hay clientes registrados.</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- MODAL CREAR / EDITAR CLIENTE -->
+<div id="modalCliente" class="modal-backdrop">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitulo">Registrar Cliente</h3>
+            <button type="button" class="close-btn" onclick="cerrarModal()">&times;</button>
+        </div>
+        <form th:action="@{/clientes/guardar}" method="post">
+            <input type="hidden" id="clienteId" name="id">
+
+            <div>
+                <label>RUC / Cédula de Identidad:</label>
+                <input type="text" id="clienteRuc" name="ruc" placeholder="Ej: 1234567-8">
+            </div>
+            <div>
+                <label>Nombre / Razón Social *:</label>
+                <input type="text" id="clienteNombre" name="nombre" placeholder="Ej: Juan Pérez" required>
+            </div>
+            <div>
+                <label>Teléfono:</label>
+                <input type="text" id="clienteTelefono" name="telefono" placeholder="Ej: 0981123456">
+            </div>
+            <div>
+                <label>Dirección:</label>
+                <input type="text" id="clienteDireccion" name="direccion" placeholder="Ej: Av. Principal 123">
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+                <button type="button" class="btn btn-gray" onclick="cerrarModal()">Cancelar</button>
+                <button type="submit" class="btn btn-green">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function filtrarTablaClientes() {
+        const busqueda = document.getElementById("inputBuscador").value.trim().toLowerCase();
+        const filas = document.querySelectorAll(".fila-cliente");
+        let visibles = 0;
+
+        filas.forEach(fila => {
+            const ruc = fila.querySelector(".col-ruc").textContent.toLowerCase();
+            const nombre = fila.querySelector(".col-nombre").textContent.toLowerCase();
+
+            if (ruc.includes(busqueda) || nombre.includes(busqueda)) {
+                fila.style.display = "";
+                visibles++;
+            } else {
+                fila.style.display = "none";
+            }
+        });
+
+        const rowSinResultados = document.getElementById("rowSinResultados");
+        if (rowSinResultados) {
+            rowSinResultados.style.display = (visibles === 0 && filas.length > 0) ? "" : "none";
+        }
+    }
+
+    function limpiarBuscador() {
+        document.getElementById("inputBuscador").value = "";
+        filtrarTablaClientes();
+    }
+
+    function abrirModalNuevo() {
+        document.getElementById("modalTitulo").innerText = "Registrar Cliente";
+        document.getElementById("clienteId").value = "";
+        document.getElementById("clienteRuc").value = "";
+        document.getElementById("clienteNombre").value = "";
+        document.getElementById("clienteTelefono").value = "";
+        document.getElementById("clienteDireccion").value = "";
+        document.getElementById("modalCliente").style.display = "flex";
+    }
+
+    function editarCliente(btn) {
+        document.getElementById("modalTitulo").innerText = "Editar Cliente";
+        document.getElementById("clienteId").value = btn.getAttribute("data-id");
+        document.getElementById("clienteRuc").value = btn.getAttribute("data-ruc") || "";
+        document.getElementById("clienteNombre").value = btn.getAttribute("data-nombre");
+        document.getElementById("clienteTelefono").value = btn.getAttribute("data-telefono") || "";
+        document.getElementById("clienteDireccion").value = btn.getAttribute("data-direccion") || "";
+        document.getElementById("modalCliente").style.display = "flex";
+    }
+
+    function cerrarModal() {
+        document.getElementById("modalCliente").style.display = "none";
+    }
+</script>
+
+</body>
+</html>

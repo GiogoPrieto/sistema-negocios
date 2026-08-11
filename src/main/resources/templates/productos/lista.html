@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Lista de Productos</title>
+    <link rel="stylesheet" th:href="@{/estilos.css}">
+    <style>
+        .combo-container {
+            position: relative;
+            width: 240px;
+        }
+        .combo-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            box-sizing: border-box;
+            background-color: #ffffff;
+            cursor: pointer;
+        }
+        .combo-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            max-height: 200px;
+            overflow-y: auto;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            margin-top: 4px;
+        }
+        .combo-option {
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .combo-option:hover {
+            background-color: #f1f5f9;
+            color: #0f172a;
+        }
+        select.filter-select {
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            background-color: #ffffff;
+            cursor: pointer;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-content">
+        <h1>Sistema de Negocios</h1>
+        <p>Módulo de Gestión de Productos</p>
+    </div>
+</header>
+
+<main>
+    <!-- MENSAJES DE ÉXITO O ERROR -->
+    <div th:if="${exito}" style="background-color: #d1fae5; color: #065f46; padding: 12px; border-radius: 6px; margin-bottom: 20px; border: 1px solid #a7f3d0; font-weight: bold;">
+        ✅ <span th:text="${exito}"></span>
+    </div>
+    <div th:if="${error}" style="background-color: #fee2e2; color: #991b1b; padding: 12px; border-radius: 6px; margin-bottom: 20px; border: 1px solid #fca5a5; font-weight: bold;">
+        ❌ <span th:text="${error}"></span>
+    </div>
+
+    <div class="page-header">
+        <h2 class="page-title">Productos Registrados</h2>
+        <div style="display: flex; gap: 10px;">
+            <a th:href="@{/caja}" class="btn" style="background-color: #0284c7; color: white; text-decoration: none;">💵 Gestión de Caja</a>
+            <a th:href="@{/reportes/productos/excel}" class="btn" style="background-color: #16a34a; color: white; text-decoration: none;">📊 Exportar Excel</a>
+            <a th:href="@{/ventas}" class="btn" style="background-color: #059669; color: white; text-decoration: none;">🛒 Ir a Ventas</a>
+            <a th:href="@{/productos/nuevo}" class="btn btn-primary">+ Nuevo Producto</a>
+        </div>
+    </div>
+
+    <!-- BUSCADOR CON FILTROS -->
+    <form id="formFiltro" th:action="@{/productos}" method="get" style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+
+        <!-- Filtro por ID -->
+        <div>
+            <input type="text"
+                   name="id"
+                   id="inputBusquedaId"
+                   th:value="${idBusqueda}"
+                   placeholder="Escanear ID..."
+                   autofocus
+                   style="padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; width: 120px;">
+        </div>
+
+        <!-- Filtro por Nombre -->
+        <div>
+            <input type="text"
+                   name="nombre"
+                   id="inputBusquedaNombre"
+                   th:value="${nombreBusqueda}"
+                   placeholder="Buscar por Nombre..."
+                   style="padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; width: 200px;">
+        </div>
+
+        <!-- Filtro por Categoría -->
+        <div class="combo-container">
+            <input type="text"
+                   id="inputCategoria"
+                   name="categoria"
+                   class="combo-input"
+                   th:value="${categoriaBusqueda}"
+                   placeholder="▼ Buscar o elegir Categoría..."
+                   autocomplete="off"
+                   onclick="mostrarOpciones()"
+                   oninput="filtrarOpciones()">
+
+            <div id="comboDropdown" class="combo-dropdown"></div>
+        </div>
+
+        <!-- Filtro por Fecha de Vencimiento -->
+        <div>
+            <select name="vencimiento" class="filter-select">
+                <option value="">-- Vencimiento --</option>
+                <option value="7" th:selected="${vencimientoBusqueda == '7'}">Vence en 7 días</option>
+                <option value="15" th:selected="${vencimientoBusqueda == '15'}">Vence en 15 días</option>
+                <option value="30" th:selected="${vencimientoBusqueda == '30'}">Vence en 1 mes</option>
+            </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Buscar</button>
+        <a th:href="@{/productos}" class="btn btn-secondary"
+           th:if="${idBusqueda != null || (nombreBusqueda != null && !nombreBusqueda.isBlank()) || (categoriaBusqueda != null && !categoriaBusqueda.isBlank()) || (vencimientoBusqueda != null && !vencimientoBusqueda.isBlank())}">Limpiar Filtros</a>
+    </form>
+
+    <div class="table-card">
+        <table>
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Marca</th>
+                <th>Categoría</th>
+                <th>Precio</th>
+                <th>Stock</th>
+                <th>Vencimiento</th>
+                <th>Descripción</th>
+                <th>Acciones</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="prod : ${productos}">
+                <td th:text="${prod.id != null ? '#' + prod.id : '#'}">#1</td>
+                <td><strong th:text="${prod.nombre}">Nombre</strong></td>
+                <td th:text="${prod.marca}">Marca</td>
+                <td><span class="badge col-categoria" th:text="${prod.categoria}">Categoría</span></td>
+                <td th:text="${prod.precio != null ? '$ ' + #numbers.formatDecimal(prod.precio, 1, 'POINT', 0, 'POINT') : '$ 0'}">$ 0</td>
+                <td th:text="${prod.stock != null ? #numbers.formatDecimal(prod.stock, 1, 'POINT', 0, 'POINT') : '0'}">0</td>
+
+                <!-- Columna de Fecha de Vencimiento -->
+                <td th:text="${prod.fechaVencimiento != null ? #temporals.format(prod.fechaVencimiento, 'dd/MM/yyyy') : 'N/A'}">01/09/2026</td>
+
+                <td th:text="${prod.descripcion}">Descripción</td>
+                <td>
+                    <div class="actions">
+                        <a th:href="@{/productos/editar/{id}(id=${prod.id})}" class="btn btn-sm btn-edit">Editar</a>
+
+                        <!-- FORMULARIO DE ELIMINACIÓN CORREGIDO -->
+                        <form th:action="@{/productos/eliminar/{id}(id=${prod.id})}"
+                              method="post"
+                              style="display:inline;"
+                              onsubmit="return confirm('¿Seguro que deseas eliminar este producto?');">
+                            <button type="submit" class="btn btn-sm btn-delete">Eliminar</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            <tr th:if="${productos == null || #lists.isEmpty(productos)}">
+                <td colspan="9" style="text-align: center; color: #64748b; padding: 20px;">
+                    No se encontraron productos registrados en la base de datos.
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Formulario para subir el archivo Excel -->
+    <div style="margin-top: 20px;">
+        <form th:action="@{/productos/importar}" method="post" enctype="multipart/form-data" style="display: inline-flex; gap: 8px; align-items: center;">
+            <input type="file" name="archivo" accept=".xlsx, .xls" required style="font-size: 13px;">
+            <button type="submit" class="btn" style="background-color: #2563eb; color: white;">📥 Importar Excel</button>
+        </form>
+    </div>
+</main>
+
+<script th:inline="javascript">
+    document.addEventListener("DOMContentLoaded", function() {
+        poblarMenuCategorias();
+    });
+
+    let inputId = document.getElementById("inputBusquedaId");
+    if (inputId) {
+        inputId.addEventListener("keydown", function(e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                document.getElementById("formFiltro").submit();
+            }
+        });
+    }
+
+    function poblarMenuCategorias() {
+        let dropdown = document.getElementById("comboDropdown");
+        /*[# th:if="${categoriasExistentes != null}"]*/
+        let categoriasList = /*[[${categoriasExistentes}]]*/ [];
+        /*[/]*/
+
+        dropdown.innerHTML = '<div class="combo-option" onclick="seleccionarCategoria(\'\')">-- Todas las Categorías --</div>';
+
+        if (categoriasList && categoriasList.length > 0) {
+            categoriasList.forEach(cat => {
+                let item = document.createElement("div");
+                item.className = "combo-option";
+                item.textContent = cat;
+                item.onclick = function() { seleccionarCategoria(cat); };
+                dropdown.appendChild(item);
+            });
+        }
+    }
+
+    function mostrarOpciones() {
+        document.getElementById("comboDropdown").style.display = "block";
+    }
+
+    function seleccionarCategoria(valor) {
+        document.getElementById("inputCategoria").value = valor;
+        document.getElementById("comboDropdown").style.display = "none";
+    }
+
+    function filtrarOpciones() {
+        let texto = document.getElementById("inputCategoria").value.toLowerCase();
+        let opciones = document.querySelectorAll("#comboDropdown .combo-option");
+        let dropdown = document.getElementById("comboDropdown");
+
+        dropdown.style.display = "block";
+
+        opciones.forEach(opcion => {
+            let contenido = opcion.textContent.toLowerCase();
+            opcion.style.display = contenido.includes(texto) ? "block" : "none";
+        });
+    }
+
+    document.addEventListener("click", function(event) {
+        let container = document.querySelector(".combo-container");
+        if (container && !container.contains(event.target)) {
+            document.getElementById("comboDropdown").style.display = "none";
+        }
+    });
+</script>
+
+</body>
+</html>

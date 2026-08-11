@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Ticket de Venta #<span th:text="${venta.id}">1</span></title>
+    <style>
+        body { font-family: 'Courier New', Courier, monospace; width: 280px; margin: 0 auto; padding: 10px; font-size: 12px; }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .linea { border-bottom: 1px dashed #000; margin: 5px 0; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        th, td { text-align: left; padding: 2px 0; }
+        .btn-imprimir { margin-bottom: 15px; padding: 8px 15px; background-color: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        @media print {
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="no-print text-center">
+    <button class="btn-imprimir" onclick="window.print()">🖨️ Imprimir Ticket</button>
+    <a th:href="@{/ventas/formulario}" style="margin-left: 10px; font-family: sans-serif;">Nueva Venta</a>
+</div>
+
+<div class="text-center">
+    <h3>SISTEMA DE NEGOCIOS</h3>
+    <p>Ticket N°: <span th:text="${venta.id}"></span></p>
+    <p>Fecha: <span th:text="${#temporals.format(venta.fecha, 'dd/MM/yyyy HH:mm')}"></span></p>
+</div>
+
+<div class="linea"></div>
+
+<div>
+    <strong>CLIENTE:</strong><br>
+    <span th:text="${venta.cliente != null ? venta.cliente.nombre : 'Sin Nombre'}"></span><br>
+    <strong>RUC/CI:</strong> <span th:text="${venta.cliente != null ? venta.cliente.ruc : 'X'}"></span>
+</div>
+
+<div class="linea"></div>
+
+<table>
+    <thead>
+    <tr>
+        <th>Cant.</th>
+        <th>Producto</th>
+        <th class="text-right">Total</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="det : ${venta.detalles}">
+        <td th:text="${det.cantidad}">1</td>
+        <td th:text="${det.producto.nombre}">Producto</td>
+        <td class="text-right" th:text="${#numbers.formatDecimal(det.subtotal, 1, 'POINT', 0, 'POINT')}">0</td>
+    </tr>
+    </tbody>
+</table>
+
+<div class="linea"></div>
+
+<div class="text-right" style="font-size: 14px;">
+    <strong>TOTAL: $ <span th:text="${#numbers.formatDecimal(venta.total, 1, 'POINT', 0, 'POINT')}"></span></strong>
+</div>
+
+<div class="linea"></div>
+
+<div class="text-center" style="margin-top: 15px;">
+    <p>¡Gracias por su compra!</p>
+</div>
+
+</body>
+</html>

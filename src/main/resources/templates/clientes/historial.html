@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Historial del Cliente</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: 20px auto; background: white; padding: 30px; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+
+        .client-card { background: #f1f5f9; padding: 15px 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #cbd5e1; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .stat-card { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 15px; border-radius: 8px; text-align: center; }
+        .stat-card h4 { margin: 0; color: #166534; font-size: 14px; }
+        .stat-card div { font-size: 24px; font-weight: bold; color: #15803d; margin-top: 5px; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { background-color: #f8fafc; text-align: left; padding: 10px; font-size: 13px; color: #64748b; border-bottom: 2px solid #e2e8f0; }
+        td { padding: 12px 10px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+
+        .btn { padding: 8px 14px; border-radius: 6px; border: none; font-weight: 600; text-decoration: none; cursor: pointer; font-size: 13px; }
+        .btn-gray { background-color: #e2e8f0; color: #334155; }
+        .btn-blue { background-color: #2563eb; color: white; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h2>Historial de Compras</h2>
+        <a th:href="@{/clientes}" class="btn btn-gray">Volver a Clientes</a>
+    </div>
+
+    <!-- DATOS DEL CLIENTE -->
+    <div class="client-card">
+        <h3 style="margin: 0 0 10px 0;" th:text="${cliente.nombre}">Nombre Cliente</h3>
+        <p style="margin: 3px 0; color: #475569;"><strong>RUC / CI:</strong> <span th:text="${cliente.ruc != null && cliente.ruc != '' ? cliente.ruc : 'N/A'}"></span></p>
+        <p style="margin: 3px 0; color: #475569;"><strong>Teléfono:</strong> <span th:text="${cliente.telefono != null && cliente.telefono != '' ? cliente.telefono : 'N/A'}"></span></p>
+        <p style="margin: 3px 0; color: #475569;"><strong>Dirección:</strong> <span th:text="${cliente.direccion != null && cliente.direccion != '' ? cliente.direccion : 'N/A'}"></span></p>
+    </div>
+
+    <!-- TARJETAS DE CONSUMO -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h4>Total de Compras Realizadas</h4>
+            <div th:text="${totalCompras}">0</div>
+        </div>
+        <div class="stat-card">
+            <h4>Consumo Total Acumulado</h4>
+            <div>$ <span th:text="${#numbers.formatDecimal(totalConsumido, 1, 'POINT', 0, 'POINT')}">0</span></div>
+        </div>
+    </div>
+
+    <!-- TABLA DE VENTAS DEL CLIENTE -->
+    <table>
+        <thead>
+        <tr>
+            <th>N° Venta</th>
+            <th>Fecha y Hora</th>
+            <th>Estado</th>
+            <th>Total</th>
+            <th>Acción</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="v : ${compras}">
+            <td th:text="'#' + ${v.id}">#1</td>
+            <td th:text="${#temporals.format(v.fecha, 'dd/MM/yyyy HH:mm')}">01/01/2026 10:00</td>
+            <td>
+                <span style="background-color: #dcfce7; color: #166534; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 12px;" th:text="${v.estado}">COMPLETADA</span>
+            </td>
+            <td><strong>$ <span th:text="${#numbers.formatDecimal(v.total, 1, 'POINT', 0, 'POINT')}">0</span></strong></td>
+            <td>
+                <a th:href="@{/ventas/ticket/{id}(id=${v.id})}" class="btn btn-blue" target="_blank">Ver Ticket</a>
+            </td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(compras)}">
+            <td colspan="5" style="text-align: center; color: #94a3b8; font-style: italic;">Este cliente no registra compras aún.</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+</body>
+</html>

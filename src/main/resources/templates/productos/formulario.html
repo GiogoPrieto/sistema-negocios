@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${producto.id == null ? 'Nuevo Producto' : 'Editar Producto'}">Producto</title>
+    <link rel="stylesheet" th:href="@{/estilos.css}">
+</head>
+<body>
+
+<header>
+    <div class="header-content">
+        <h1>Sistema de Negocios</h1>
+        <p th:text="${producto.id == null ? 'Registrar Nuevo Producto' : 'Modificar Producto'}">Producto</p>
+    </div>
+</header>
+
+<main style="max-width: 600px; margin: 30px auto; padding: 20px;">
+    <h2 class="page-title" th:text="${producto.id == null ? 'Nuevo Producto' : 'Editar Producto'}">Nuevo Producto</h2>
+
+    <form th:action="@{/productos/guardar}" th:object="${producto}" method="post" id="formProducto">
+        <!-- CAMPOS OCULTOS DE ID Y ESTADO ACTIVO -->
+        <input type="hidden" th:field="*{id}" />
+        <input type="hidden" th:field="*{activo}" />
+
+        <!-- CÓDIGO DE BARRAS -->
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; font-weight: bold; margin-bottom: 5px;">Código de Barras:</label>
+            <input type="text"
+                   th:field="*{codigoBarras}"
+                   placeholder="Escanear o ingresar código..."
+                   autofocus
+                   style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1;" />
+        </div>
+
+        <!-- NOMBRE -->
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; font-weight: bold; margin-bottom: 5px;">Nombre:</label>
+            <input type="text" th:field="*{nombre}" required style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1;" />
+        </div>
+
+        <!-- MARCA Y CATEGORÍA -->
+        <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+            <div style="flex: 1;">
+                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Marca:</label>
+                <input type="text" th:field="*{marca}" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1;" />
+            </div>
+            <div style="flex: 1;">
+                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Categoría:</label>
+                <input type="text" th:field="*{categoria}" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1;" />
+            </div>
+        </div>
+
+        <!-- PRECIO DE COSTO -->
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; font-weight: bold; margin-bottom: 5px;">Precio de Costo ($):</label>
+            <input type="text"
+                   id="inputCostoVisual"
+                   placeholder="80.000"
+                   style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1;"
+                   th:value="${producto.precioCosto != null ? #numbers.formatDecimal(producto.precioCosto, 1, 'POINT', 0, 'POINT') : ''}" />
+            <input type="hidden" th:field="*{precioCosto}" id="inputCostoReal" />
+        </div>
+
+        <!-- PRECIO DE VENTA -->
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; font-weight: bold; margin-bottom: 5px;">Precio de Venta ($):</label>
+            <input type="text"
+                   id="inputPrecioVisual"
+                   placeholder="100.000"
+                   required
+                   style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1;"
+                   th:value="${producto.precio != null ? #numbers.formatDecimal(producto.precio, 1, 'POINT', 0, 'POINT') : ''}" />
+            <input type="hidden" th:field="*{precio}" id="inputPrecioReal" />
+        </div>
+
+        <!-- TASA DE IVA -->
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; font-weight: bold; margin-bottom: 5px;">Tasa de IVA:</label>
+            <select th:field="*{iva}" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1; background-color: #ffffff;">
+                <option value="10">10% (divide por 11)</option>
+                <option value="5">5% (divide por 21)</option>
+                <option value="0">Exenta (0%)</option>
+            </select>
+        </div>
+
+        <!-- STOCK Y VENCIMIENTO -->
+        <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+            <div style="flex: 1;">
+                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Stock:</label>
+                <input type="number" th:field="*{stock}" required min="0" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1;" />
+            </div>
+            <div style="flex: 1;">
+                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Fecha de Vencimiento:</label>
+                <input type="date" th:field="*{fechaVencimiento}" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1;" />
+            </div>
+        </div>
+
+        <!-- DESCRIPCIÓN -->
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; font-weight: bold; margin-bottom: 5px;">Descripción:</label>
+            <textarea th:field="*{descripcion}" rows="3" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1;"></textarea>
+        </div>
+
+        <!-- BOTONES -->
+        <div style="display: flex; gap: 10px;">
+            <button type="submit" class="btn btn-primary" style="background-color: #2563eb; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer;">Guardar Producto</button>
+            <a th:href="@{/productos}" class="btn" style="background-color: #64748b; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px;">Cancelar</a>
+        </div>
+    </form>
+</main>
+
+<script th:inline="none">
+    document.addEventListener("DOMContentLoaded", function() {
+        var form = document.getElementById("formProducto");
+
+        function formatearNumero(val) {
+            var num = val.replace(/\D/g, "");
+            if (!num) return "";
+            return new Intl.NumberFormat("es-PY").format(num);
+        }
+
+        function aplicarMascara(idVisual, idReal) {
+            var inputVisual = document.getElementById(idVisual);
+            var inputReal = document.getElementById(idReal);
+
+            if (!inputVisual || !inputReal) return;
+
+            function actualizarValorReal() {
+                inputReal.value = inputVisual.value.replace(/\D/g, "");
+            }
+
+            if (inputVisual.value) {
+                inputVisual.value = formatearNumero(inputVisual.value);
+                actualizarValorReal();
+            }
+
+            inputVisual.addEventListener("input", function(e) {
+                var cursorPosition = e.target.selectionStart;
+                var originalLength = e.target.value.length;
+
+                e.target.value = formatearNumero(e.target.value);
+                actualizarValorReal();
+
+                var newLength = e.target.value.length;
+                cursorPosition += (newLength - originalLength);
+                e.target.setSelectionRange(cursorPosition, cursorPosition);
+            });
+        }
+
+        aplicarMascara("inputCostoVisual", "inputCostoReal");
+        aplicarMascara("inputPrecioVisual", "inputPrecioReal");
+
+        form.addEventListener("submit", function() {
+            document.getElementById("inputCostoReal").value = document.getElementById("inputCostoVisual").value.replace(/\D/g, "");
+            document.getElementById("inputPrecioReal").value = document.getElementById("inputPrecioVisual").value.replace(/\D/g, "");
+        });
+    });
+</script>
+
+</body>
+</html>

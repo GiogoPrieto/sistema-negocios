@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Registrar Nueva Venta</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 20px; }
+        .form-container { max-width: 950px; margin: 20px auto; background: white; padding: 30px; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        h2 { margin: 0; color: #0f172a; font-size: 22px; }
+
+        /* PANEL DE CLIENTE */
+        .client-panel { background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #cbd5e1; display: flex; gap: 10px; align-items: flex-end; }
+        .client-panel-group { flex: 1; }
+
+        /* BUSCADOR DE PRODUCTOS Y DESPLEGABLE */
+        .filter-panel { background: #f1f5f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #cbd5e1; }
+        .filter-grid { display: grid; grid-template-columns: 140px 1fr 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+
+        label { display: block; font-weight: 600; margin-bottom: 4px; font-size: 12px; color: #475569; }
+        input[type="text"], input[type="number"], select { width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 14px; background: white; }
+
+        .combo-container { position: relative; }
+        .combo-dropdown { display: none; position: absolute; top: 100%; left: 0; right: 0; max-height: 180px; overflow-y: auto; background: white; border: 1px solid #cbd5e1; border-radius: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); z-index: 1000; margin-top: 2px; }
+        .combo-option { padding: 8px 12px; cursor: pointer; font-size: 13px; }
+        .combo-option:hover { background-color: #f1f5f9; color: #0f172a; }
+
+        .add-panel { display: grid; grid-template-columns: 1fr 100px 140px auto; gap: 10px; align-items: end; border-top: 1px dashed #cbd5e1; padding-top: 12px; }
+
+        /* TABLA Y TOTAL */
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th { background-color: #f8fafc; text-align: left; padding: 10px; font-size: 13px; color: #64748b; border-bottom: 2px solid #e2e8f0; }
+        td { padding: 12px 10px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+
+        .total-card { display: flex; justify-content: space-between; align-items: center; background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 15px 20px; border-radius: 8px; margin-bottom: 20px; }
+        .total-card h3 { margin: 0; color: #166534; font-size: 18px; }
+        .total-amount { font-size: 28px; font-weight: 800; color: #15803d; }
+
+        .btn { padding: 9px 16px; border-radius: 6px; border: none; font-weight: 600; text-decoration: none; cursor: pointer; font-size: 14px; }
+        .btn-blue { background-color: #2563eb; color: white; }
+        .btn-red { background-color: #ef4444; color: white; padding: 5px 10px; font-size: 12px; }
+        .btn-gray { background-color: #e2e8f0; color: #334155; }
+        .btn-green { background-color: #059669; color: white; }
+        .form-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+        /* ESTILOS DEL MODAL (EMERGENTE) */
+        .modal-backdrop { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.5); z-index: 2000; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 25px; border-radius: 10px; max-width: 450px; width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .modal-header h3 { margin: 0; font-size: 18px; }
+        .close-btn { cursor: pointer; font-size: 20px; font-weight: bold; color: #64748b; border: none; background: none; }
+    </style>
+</head>
+<body>
+
+<div class="form-container">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>Registrar Nueva Venta</h2>
+        <a th:href="@{/clientes}" class="btn btn-gray" style="text-decoration: none;">👥 Gestionar Clientes</a>
+    </div>
+
+    <!-- FORMULARIO DE ENVÍO HACIA SPRING BOOT -->
+    <form th:action="@{/ventas/guardar}" method="post" id="formVenta">
+
+        <!-- PANEL DE CLIENTE -->
+        <div class="client-panel">
+            <div class="client-panel-group">
+                <label>Cliente / Razón Social</label>
+                <select name="clienteId" id="selectCliente">
+                    <option value="">-- Sin Nombre / Consumidor Final --</option>
+                    <option th:each="c : ${clientes}"
+                            th:value="${c.id}"
+                            th:text="${c.ruc != null && c.ruc != '' ? c.ruc + ' - ' + c.nombre : c.nombre}">
+                    </option>
+                </select>
+            </div>
+            <div>
+                <button type="button" class="btn btn-blue" onclick="abrirModalCliente()">+ Nuevo Cliente</button>
+            </div>
+        </div>
+
+        <!-- PANEL DE BÚSQUEDA Y SELECCIÓN DE PRODUCTOS -->
+        <div class="filter-panel">
+
+            <!-- BUSCADOR / FILTROS -->
+            <div class="filter-grid">
+                <div>
+                    <label>ID / Cód. Barras</label>
+                    <input type="text" id="filtroId" placeholder="Escanear o ID..." autofocus oninput="filtrarProductos()">
+                </div>
+                <div>
+                    <label>Nombre del Producto</label>
+                    <input type="text" id="filtroNombre" placeholder="Buscar por nombre..." oninput="filtrarProductos()">
+                </div>
+                <div class="combo-container">
+                    <label>Categoría</label>
+                    <input type="text" id="inputCategoria" class="combo-input" placeholder="▼ Elegir Categoría..." autocomplete="off" onclick="mostrarOpciones()" oninput="filtrarOpciones(); filtrarProductos();">
+                    <div id="comboDropdown" class="combo-dropdown"></div>
+                </div>
+                <div style="display: flex; align-items: end;">
+                    <button type="button" class="btn btn-gray" style="width: 100%;" onclick="limpiarFiltros()">Limpiar Filtros</button>
+                </div>
+            </div>
+
+            <!-- SELECCIÓN Y ADICIÓN -->
+            <div class="add-panel">
+                <div>
+                    <label>Producto Encontrado</label>
+                    <select id="selectProducto" onchange="actualizarPrecioUnitario()">
+                        <option value="" disabled selected>-- Selecciona un producto --</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Cantidad</label>
+                    <input type="number" id="inputCantidad" value="1" min="1">
+                </div>
+                <div>
+                    <label>Precio Unit.</label>
+                    <input type="text" id="inputPrecio" readonly placeholder="$ 0">
+                </div>
+                <div>
+                    <button type="button" class="btn btn-blue" onclick="agregarProducto()">+ Agregar</button>
+                </div>
+            </div>
+
+        </div>
+
+        <table>
+            <thead>
+            <tr>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th>Precio Unit.</th>
+                <th>Subtotal</th>
+                <th>Acción</th>
+            </tr>
+            </thead>
+            <tbody id="tablaDetalles">
+            <tr id="rowVacio">
+                <td colspan="5" style="text-align: center; color: #94a3b8; font-style: italic;">No se han agregado productos a la venta.</td>
+            </tr>
+            </tbody>
+        </table>
+
+        <!-- MÉTODO DE PAGO INCLUIDO DENTRO DEL FORMULARIO -->
+        <div style="margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #cbd5e1;">
+            <label for="metodoPago" style="font-size: 13px; font-weight: bold; margin-bottom: 6px;">Método de Pago:</label>
+            <select id="metodoPago" name="metodoPago" class="form-control" style="font-weight: 600;">
+                <option value="EFECTIVO">💵 Efectivo</option>
+                <option value="TARJETA_DEBITO">💳 Tarjeta Débito</option>
+                <option value="TARJETA_CREDITO">💳 Tarjeta Crédito</option>
+                <option value="TRANSFERENCIA">🏦 Transferencia</option>
+                <option value="QR">📱 QR</option>
+            </select>
+        </div>
+
+        <!-- VISTA PREVIA DEL TOTAL -->
+        <div class="total-card">
+            <h3>Total de la Venta:</h3>
+            <div class="total-amount" id="lblTotal">$ 0</div>
+        </div>
+
+        <div class="form-actions">
+            <a th:href="@{/ventas}" class="btn btn-gray">Cancelar</a>
+            <button type="submit" class="btn btn-green">Finalizar y Guardar Venta</button>
+        </div>
+    </form>
+</div>
+
+<!-- MODAL PARA CREAR CLIENTE -->
+<div id="modalCliente" class="modal-backdrop">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Registrar Nuevo Cliente</h3>
+            <button type="button" class="close-btn" onclick="cerrarModalCliente()">&times;</button>
+        </div>
+        <div>
+            <div style="margin-bottom: 12px;">
+                <label>RUC / Cédula de Identidad:</label>
+                <input type="text" id="nuevoRuc" placeholder="Ej: 1234567-8">
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label>Nombre / Razón Social *:</label>
+                <input type="text" id="nuevoNombre" placeholder="Ej: Juan Pérez" required>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label>Teléfono:</label>
+                <input type="text" id="nuevoTelefono" placeholder="Ej: 0981123456">
+            </div>
+            <div style="margin-bottom: 20px;">
+                <label>Dirección:</label>
+                <input type="text" id="nuevaDireccion" placeholder="Ej: Av. Principal 123">
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" class="btn btn-gray" onclick="cerrarModalCliente()">Cancelar</button>
+                <button type="button" class="btn btn-green" onclick="guardarClienteModal()">Guardar Cliente</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    /* Extraer productos enviados desde Spring Boot */
+    /*[# th:if="${productos != null}"]*/
+    const listaProductos = /*[[${productos}]]*/ [];
+    /*[/]*/
+
+    const filtroId = document.getElementById('filtroId');
+    const selectProducto = document.getElementById('selectProducto');
+    const inputCantidad = document.getElementById('inputCantidad');
+    const inputPrecio = document.getElementById('inputPrecio');
+    const tablaDetalles = document.getElementById('tablaDetalles');
+    const lblTotal = document.getElementById('lblTotal');
+    const rowVacio = document.getElementById('rowVacio');
+
+    let totalVenta = 0;
+
+    function formatearNumero(numero) {
+        if (numero === null || numero === undefined || isNaN(numero)) return '0';
+        return Number(numero).toLocaleString('es-PY');
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        poblarDesplegableCategorias();
+        filtrarProductos();
+    });
+
+    filtroId.addEventListener("keydown", function(e) {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            if (selectProducto.options.length > 0 && selectProducto.value) {
+                agregarProducto();
+                limpiarFiltros();
+                filtroId.focus();
+            } else {
+                alert("Producto no encontrado o fuera de stock.");
+            }
+        }
+    });
+
+    function poblarDesplegableCategorias() {
+        const dropdown = document.getElementById("comboDropdown");
+        const categoriasSet = new Set();
+
+        listaProductos.forEach(p => {
+            if (p.categoria && p.categoria.trim() !== "") {
+                categoriasSet.add(p.categoria.trim());
+            }
+        });
+
+        dropdown.innerHTML = '<div class="combo-option" onclick="seleccionarCategoria(\'\')">-- Todas las Categorías --</div>';
+
+        Array.from(categoriasSet).sort().forEach(cat => {
+            const item = document.createElement("div");
+            item.className = "combo-option";
+            item.textContent = cat;
+            item.onclick = function() { seleccionarCategoria(cat); };
+            dropdown.appendChild(item);
+        });
+    }
+
+    function mostrarOpciones() {
+        document.getElementById("comboDropdown").style.display = "block";
+    }
+
+    function seleccionarCategoria(valor) {
+        document.getElementById("inputCategoria").value = valor;
+        document.getElementById("comboDropdown").style.display = "none";
+        filtrarProductos();
+    }
+
+    function filtrarOpciones() {
+        const texto = document.getElementById("inputCategoria").value.toLowerCase();
+        const opciones = document.querySelectorAll("#comboDropdown .combo-option");
+        document.getElementById("comboDropdown").style.display = "block";
+
+        opciones.forEach(opcion => {
+            const contenido = opcion.textContent.toLowerCase();
+            opcion.style.display = contenido.includes(texto) ? "block" : "none";
+        });
+    }
+
+    function filtrarProductos() {
+        const fId = filtroId.value.trim().toLowerCase();
+        const fNombre = document.getElementById('filtroNombre').value.trim().toLowerCase();
+        const fCat = document.getElementById('inputCategoria').value.trim().toLowerCase();
+
+        selectProducto.innerHTML = '<option value="" disabled selected>-- Selecciona un producto --</option>';
+
+        const filtrados = listaProductos.filter(p => {
+            const matchId = !fId ||
+                            (p.id && p.id.toString().toLowerCase() === fId) ||
+                            (p.codigoBarras && p.codigoBarras.toLowerCase() === fId);
+            const matchNombre = !fNombre || (p.nombre && p.nombre.toLowerCase().includes(fNombre));
+            const matchCat = !fCat || (p.categoria && p.categoria.toLowerCase() === fCat);
+            return matchId && matchNombre && matchCat;
+        });
+
+        if (filtrados.length === 0) {
+            selectProducto.innerHTML = '<option value="" disabled selected>No se encontraron productos</option>';
+        } else {
+            filtrados.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.setAttribute('data-nombre', p.nombre);
+                opt.setAttribute('data-precio', p.precio);
+                opt.setAttribute('data-stock', p.stock);
+                opt.textContent = `#${p.id} - ${p.nombre} ($ ${formatearNumero(p.precio)} | Stock: ${formatearNumero(p.stock)})`;
+                selectProducto.appendChild(opt);
+            });
+            selectProducto.selectedIndex = 1;
+        }
+        actualizarPrecioUnitario();
+    }
+
+    function limpiarFiltros() {
+        filtroId.value = '';
+        document.getElementById('filtroNombre').value = '';
+        document.getElementById('inputCategoria').value = '';
+        filtrarProductos();
+    }
+
+    function actualizarPrecioUnitario() {
+        const opt = selectProducto.options[selectProducto.selectedIndex];
+        if (opt && opt.value) {
+            const precioVal = parseFloat(opt.getAttribute('data-precio')) || 0;
+            inputPrecio.value = `$ ${formatearNumero(precioVal)}`;
+        } else {
+            inputPrecio.value = '';
+        }
+    }
+
+    function agregarProducto() {
+        const prodId = selectProducto.value;
+        if (!prodId) {
+            alert("Por favor seleccione un producto");
+            return;
+        }
+
+        const opt = selectProducto.options[selectProducto.selectedIndex];
+        const nombre = opt.getAttribute('data-nombre');
+        const precio = parseFloat(opt.getAttribute('data-precio'));
+        const stock = parseInt(opt.getAttribute('data-stock'));
+        const cantidad = parseInt(inputCantidad.value);
+
+        if (cantidad <= 0 || isNaN(cantidad)) {
+            alert("Ingrese una cantidad válida");
+            return;
+        }
+
+        if (cantidad > stock) {
+            alert(`Stock insuficiente. Solo quedan ${formatearNumero(stock)} unidades disponibles.`);
+            return;
+        }
+
+        const subtotal = precio * cantidad;
+
+        if (rowVacio) rowVacio.style.display = 'none';
+
+        const row = document.createElement('tr');
+        row.setAttribute('data-subtotal', subtotal);
+        row.innerHTML = `
+            <td>
+                #${prodId} - ${nombre}
+                <input type="hidden" name="productoIds" value="${prodId}">
+            </td>
+            <td>
+                ${formatearNumero(cantidad)}
+                <input type="hidden" name="cantidades" value="${cantidad}">
+            </td>
+            <td>$ ${formatearNumero(precio)}</td>
+            <td><strong>$ ${formatearNumero(subtotal)}</strong></td>
+            <td>
+                <button type="button" class="btn btn-red" onclick="eliminarFila(this)">Eliminar</button>
+            </td>
+        `;
+
+        tablaDetalles.appendChild(row);
+        calcularTotal();
+
+        inputCantidad.value = 1;
+    }
+
+    function eliminarFila(btn) {
+        const row = btn.closest('tr');
+        row.remove();
+        if (tablaDetalles.querySelectorAll('tr[data-subtotal]').length === 0 && rowVacio) {
+            rowVacio.style.display = '';
+        }
+        calcularTotal();
+    }
+
+    function calcularTotal() {
+        totalVenta = 0;
+        const filas = tablaDetalles.querySelectorAll('tr[data-subtotal]');
+        filas.forEach(f => {
+            totalVenta += parseFloat(f.getAttribute('data-subtotal'));
+        });
+        lblTotal.innerText = `$ ${formatearNumero(totalVenta)}`;
+    }
+
+    /* FUNCIONALIDADES DEL MODAL CLIENTE */
+    function abrirModalCliente() {
+        document.getElementById("modalCliente").style.display = "flex";
+        document.getElementById("nuevoRuc").focus();
+    }
+
+    function cerrarModalCliente() {
+        document.getElementById("modalCliente").style.display = "none";
+        document.getElementById("nuevoRuc").value = "";
+        document.getElementById("nuevoNombre").value = "";
+        document.getElementById("nuevoTelefono").value = "";
+        document.getElementById("nuevaDireccion").value = "";
+    }
+
+    function guardarClienteModal() {
+        const ruc = document.getElementById("nuevoRuc").value.trim();
+        const nombre = document.getElementById("nuevoNombre").value.trim();
+        const telefono = document.getElementById("nuevoTelefono").value.trim();
+        const direccion = document.getElementById("nuevaDireccion").value.trim();
+
+        if (!nombre) {
+            alert("El nombre o razón social es obligatorio.");
+            return;
+        }
+
+        const clienteData = {
+            ruc: ruc,
+            nombre: nombre,
+            telefono: telefono,
+            direccion: direccion,
+            activo: true
+        };
+
+        fetch('/clientes/guardar-ajax', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(clienteData)
+        })
+        .then(response => {
+            if (response.ok) return response.json();
+            throw new Error("Error al guardar cliente");
+        })
+        .then(clienteGuardado => {
+            const selectCliente = document.getElementById("selectCliente");
+            const newOpt = document.createElement("option");
+            newOpt.value = clienteGuardado.id;
+            newOpt.textContent = (clienteGuardado.ruc ? clienteGuardado.ruc + " - " : "") + clienteGuardado.nombre;
+            selectCliente.appendChild(newOpt);
+            selectCliente.value = clienteGuardado.id;
+
+            cerrarModalCliente();
+        })
+        .catch(err => {
+            console.error(err);
+            alert("No se pudo guardar el cliente.");
+        });
+    }
+
+    document.addEventListener("click", function(event) {
+        const container = document.querySelector(".combo-container");
+        if (container && !container.contains(event.target)) {
+            document.getElementById("comboDropdown").style.display = "none";
+        }
+    });
+
+    document.getElementById('formVenta').addEventListener('submit', (e) => {
+        const filas = tablaDetalles.querySelectorAll('tr[data-subtotal]');
+        if (filas.length === 0) {
+            e.preventDefault();
+            alert("Debe agregar al menos un producto a la venta.");
+        }
+    });
+</script>
+
+</body>
+</html>
